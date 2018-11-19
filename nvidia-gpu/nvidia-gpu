@@ -1,0 +1,21 @@
+#!/bin/bash
+
+slice_and_dice() {
+    local haystack="$1"
+    local needle="$2"
+    local val="$(echo "$haystack" | grep "$needle")"
+    echo "$val" | cut -d: -f2 | xargs | cut -d' ' -f1
+}
+
+status_output="$(nvidia-smi -q -d MEMORY,UTILIZATION,TEMPERATURE)"
+temp="$(slice_and_dice "$status_output" 'GPU Current Temp')"
+utilization="$(echo "$status_output"| grep -A4 'Utilization$')"
+gpu_utilization="$(slice_and_dice "$utilization" 'Gpu')"
+memory_usage="$(echo "$status_output" | grep -A3 'FB Memory Usage')"
+total_mem="$(slice_and_dice "$memory_usage" 'Total')"
+used_mem="$(slice_and_dice "$memory_usage" 'Used')"
+percent_mem="$(echo "$used_mem / $total_mem" | bc -l)"
+percent_mem_formatted="$(LC_ALL=C printf "%.1f" "$percent_mem")"
+
+echo "${temp}C ${gpu_utilization}% ${used_mem}/${total_mem}MiB (${percent_mem_formatted}%)"
+
